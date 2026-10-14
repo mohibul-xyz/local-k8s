@@ -1,0 +1,42 @@
+---
+- name: Check for netplan
+  ansible.builtin.stat:
+    path: /usr/sbin/netplan
+  register: static_network_netplan
+
+- name: Require a netplan-based guest
+  ansible.builtin.assert:
+    that: static_network_netplan.stat.exists
+    fail_msg: "static_network only supports netplan guests (Ubuntu). Use an Ubuntu box or extend this role."
+
+- name: Find the interface with MAC {{ static_mac }}
+  ansible.builtin.set_fact:
+    static_network_interface: >-
+      {{ ansible_facts | dict2items
+         | selectattr('value.macaddress', 'defined')
+         | selectattr('value.macaddress', 'equalto', static_mac)
+         | map(attribute='value.device') | first | default('') }}
+
+- name: Require a matching interface
+  ansible.builtin.assert:
+    that: static_network_interface | length > 0
+    fail_msg: "No interface with MAC {{ static_mac }} on {{ inventory_hostname }}."
+
+- name: Stop cloud-init from rewriting the network config
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    content: "network: {config: disabled}\n"
+    mode: "0644"
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Write the fixed-IP netplan config
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/99-static.yaml
+    mode: "0600"
+  notify: Apply static network
+
+# Switch now, not at the end of the play: later roles install packages and
+# need the gateway route.
+- name: Apply the fixed IP now
+  ansible.builtin.meta: flush_handlers

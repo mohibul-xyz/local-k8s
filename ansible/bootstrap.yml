@@ -1,0 +1,34 @@
+---
+# Shared first stage for every playbook: reach each VM, pin its fixed IP,
+# apply the baseline.
+
+- name: Connect to each VM
+  hosts: all
+  gather_facts: false
+  tasks:
+    # A new VM is only reachable on its DHCP address (inventory ansible_host)
+    # until static_network has run; after that, only on static_ip.
+    - name: Check whether the fixed IP already answers
+      ansible.builtin.wait_for:
+        host: "{{ static_ip }}"
+        port: 22
+        timeout: 5
+      delegate_to: localhost
+      register: static_ip_check
+      failed_when: false
+
+    - name: Connect through the fixed IP
+      ansible.builtin.set_fact:
+        ansible_host: "{{ static_ip }}"
+      when: static_ip_check.state | default('') == 'started'
+
+    - name: Wait until SSH answers
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+- name: Baseline for every VM
+  hosts: all
+  become: true
+  roles:
+    - static_network
+    - common

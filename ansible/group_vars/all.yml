@@ -1,0 +1,10 @@
+---
+# Defaults for every VM. Override per VM with `host_vars` in terraform.tfvars
+# or per group with group_vars/<group>.yml.
+timezone: UTC
+
+base_packages:
+  - curl
+  - vim
+  - git
+  - ca-certificates

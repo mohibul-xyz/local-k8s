@@ -1,0 +1,6 @@
+---
+k8s_pod_cidr: 10.244.0.0/16
+k8s_service_cidr: 10.96.0.0/12
+k8s_flannel_version: v0.28.10
+# Local path (on the machine running Ansible) to write the admin kubeconfig to.
+k8s_kubeconfig_dest: ""

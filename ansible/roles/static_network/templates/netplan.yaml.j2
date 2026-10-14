@@ -1,0 +1,14 @@
+# Managed by Ansible (roles/static_network). Overrides the box's DHCP config.
+network:
+  version: 2
+  ethernets:
+    {{ static_network_interface }}:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - {{ static_ip }}/{{ static_network_prefix }}
+      routes:
+        - to: default
+          via: {{ static_network_gateway }}
+      nameservers:
+        addresses: {{ static_network_dns_servers | to_json }}

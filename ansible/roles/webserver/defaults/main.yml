@@ -1,0 +1,4 @@
+---
+webserver_index_html: |
+  <h1>{{ inventory_hostname }}</h1>
+  <p>Provisioned by Terraform + Ansible.</p>

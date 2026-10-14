@@ -1,0 +1,40 @@
+# Copy to terraform.tfvars and edit. terraform.tfvars is git-ignored.
+
+# Any Vagrant box built for VirtualBox, with Guest Additions installed
+# (bento/* boxes have them) and netplan (Ubuntu). Download once and point at
+# the file, or use a direct .box URL:
+#   vagrant box add bento/ubuntu-24.04 --provider virtualbox
+#   -> ~/.vagrant.d/boxes/bento-VAGRANTSLASH-ubuntu-24.04/<version>/<arch>/virtualbox/
+box_image = "~/boxes/ubuntu-24.04.box"
+
+# Vagrant's well-known insecure key, accepted by every official box on first boot:
+#   curl -fsSLo ~/.ssh/vagrant_insecure https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant
+#   chmod 600 ~/.ssh/vagrant_insecure
+ssh_private_key_file  = "~/.ssh/vagrant_insecure"
+admin_public_key_file = "~/.ssh/id_ed25519.pub"
+
+# Host-only network (scripts/vbox-network.sh) with the host as gateway
+# (scripts/host-nat.sh). Fixed IPs go in .10-.99; DHCP hands out .100-.199.
+# network_cidr = "192.168.56.0/24"
+# gateway_ip   = "192.168.56.1"
+# dns_servers  = ["1.1.1.1", "8.8.8.8"]
+
+# The only part you normally touch: one entry per VM.
+vms = {
+  web-01 = {
+    ip        = "192.168.56.11"
+    cpus      = 2
+    memory_mb = 2048
+    groups    = ["web"]
+    packages  = ["htop"]
+  }
+
+  db-01 = {
+    ip        = "192.168.56.21"
+    cpus      = 2
+    memory_mb = 4096
+    groups    = ["db"]
+    packages  = ["postgresql"]
+    host_vars = { timezone = "Asia/Dhaka" }
+  }
+}

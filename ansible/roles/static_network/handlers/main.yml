@@ -1,0 +1,20 @@
+---
+# Applying the config drops the SSH session when the address changes, so run
+# it in the background and reconnect on the fixed IP.
+- name: Apply netplan in the background
+  ansible.builtin.shell: sleep 2 && netplan apply
+  async: 60
+  poll: 0
+  changed_when: true
+  listen: Apply static network
+
+- name: Switch to the fixed IP
+  ansible.builtin.set_fact:
+    ansible_host: "{{ static_ip }}"
+  listen: Apply static network
+
+- name: Reconnect on the fixed IP
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 120
+  listen: Apply static network

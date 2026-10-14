@@ -1,0 +1,5 @@
+---
+skip_list:
+  # common's variables (timezone, extra_packages, ...) are the interface
+  # Terraform fills in from terraform.tfvars; short names are deliberate.
+  - var-naming[no-role-prefix]

@@ -1,0 +1,12 @@
+---
+# Plain VMs (envs/dev). Terraform runs this with the inventory it generates;
+# by hand: ansible-playbook -i ../envs/dev/inventory.yml site.yml
+
+- name: Bootstrap
+  ansible.builtin.import_playbook: bootstrap.yml
+
+- name: Web servers
+  hosts: web
+  become: true
+  roles:
+    - webserver

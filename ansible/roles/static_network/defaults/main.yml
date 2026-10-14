@@ -1,0 +1,7 @@
+---
+# All set by Terraform in the generated inventory.
+static_ip: ""
+static_mac: ""
+static_network_prefix: 24
+static_network_gateway: ""
+static_network_dns_servers: []

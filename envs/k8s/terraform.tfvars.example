@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars. Cluster shape and sizes live in main.tf.
+box_image             = "~/boxes/ubuntu-24.04.box"
+ssh_private_key_file  = "~/.ssh/vagrant_insecure"
+admin_public_key_file = "~/.ssh/id_ed25519.pub"

@@ -1,0 +1,17 @@
+---
+- name: Install nginx
+  ansible.builtin.package:
+    name: nginx
+    state: present
+
+- name: Deploy index page
+  ansible.builtin.copy:
+    dest: /var/www/html/index.html
+    content: "{{ webserver_index_html }}"
+    mode: "0644"
+
+- name: Enable and start nginx
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

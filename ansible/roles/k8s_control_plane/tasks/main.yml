@@ -1,0 +1,76 @@
+---
+- name: Check whether the cluster is already initialized
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_admin_conf
+
+- name: Initialize the control plane
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - init
+      - --apiserver-advertise-address={{ static_ip }}
+      - --apiserver-cert-extra-sans={{ static_ip }}
+      - --pod-network-cidr={{ k8s_pod_cidr }}
+      - --service-cidr={{ k8s_service_cidr }}
+      - --node-name={{ inventory_hostname }}
+  when: not k8s_admin_conf.stat.exists
+  changed_when: true
+
+- name: Create ~/.kube for the SSH user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0700"
+
+- name: Copy the admin kubeconfig for the SSH user
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    remote_src: true
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0600"
+
+- name: Download the Flannel manifest
+  ansible.builtin.get_url:
+    url: "https://github.com/flannel-io/flannel/releases/download/{{ k8s_flannel_version }}/kube-flannel.yml"
+    dest: /etc/kubernetes/kube-flannel.yml
+    mode: "0644"
+
+- name: Point Flannel at the pod CIDR
+  ansible.builtin.replace:
+    path: /etc/kubernetes/kube-flannel.yml
+    regexp: '"Network": "[^"]+"'
+    replace: '"Network": "{{ k8s_pod_cidr }}"'
+
+- name: Install Flannel
+  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f /etc/kubernetes/kube-flannel.yml
+  register: k8s_flannel_apply
+  changed_when: k8s_flannel_apply.stdout is search('created|configured')
+
+- name: Create a join command for the workers
+  ansible.builtin.command: kubeadm token create --print-join-command --ttl 1h
+  register: k8s_join
+  changed_when: false
+
+- name: Share the join command
+  ansible.builtin.set_fact:
+    k8s_join_command: "{{ k8s_join.stdout | trim }}"
+
+- name: Copy the kubeconfig to this machine
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ k8s_kubeconfig_dest }}"
+    flat: true
+  when: k8s_kubeconfig_dest | length > 0
+
+- name: Restrict the local kubeconfig
+  ansible.builtin.file:
+    path: "{{ k8s_kubeconfig_dest }}"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  when: k8s_kubeconfig_dest | length > 0

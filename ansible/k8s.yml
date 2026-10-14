@@ -1,0 +1,48 @@
+---
+# Kubernetes cluster (modules/k8s-cluster): kubeadm, containerd, Flannel.
+# Terraform runs this with the cluster's generated inventory; by hand:
+#   ansible-playbook -i ../envs/k8s/<cluster>-inventory.yml k8s.yml
+
+- name: Bootstrap
+  ansible.builtin.import_playbook: bootstrap.yml
+
+- name: Container runtime and Kubernetes packages
+  hosts: k8s_control_plane:k8s_workers
+  become: true
+  roles:
+    - k8s_node
+
+- name: Control plane
+  hosts: k8s_control_plane
+  become: true
+  roles:
+    - k8s_control_plane
+
+- name: Workers
+  hosts: k8s_workers
+  become: true
+  roles:
+    - k8s_worker
+
+- name: Wait until the cluster is ready
+  hosts: k8s_control_plane
+  become: true
+  gather_facts: false
+  vars:
+    k8s_expected_nodes: "{{ groups['k8s_control_plane'] | length + groups['k8s_workers'] | default([]) | length }}"
+  tasks:
+    - name: Wait for every node to register
+      ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes --no-headers -o name
+      register: k8s_nodes
+      until: k8s_nodes.stdout_lines | length == k8s_expected_nodes | int
+      retries: 60
+      delay: 5
+      changed_when: false
+
+    - name: Wait for every node to be Ready
+      ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready nodes --all --timeout=600s
+      changed_when: false
+
+    - name: Wait for CoreDNS
+      ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf -n kube-system rollout status deployment/coredns --timeout=300s
+      changed_when: false

@@ -1,0 +1,43 @@
+---
+- name: Set hostname to the inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Map hostname to loopback
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Install packages
+  ansible.builtin.package:
+    name: "{{ base_packages + extra_packages }}"
+    state: present
+    update_cache: true
+  when: (base_packages + extra_packages) | length > 0
+
+- name: Upgrade all packages
+  ansible.builtin.package:
+    name: "*"
+    state: latest # noqa package-latest
+  when: upgrade_packages | bool
+
+- name: Authorize your SSH key for {{ ansible_user }}
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ lookup('ansible.builtin.file', admin_public_key_file) }}"
+    state: present
+  when: admin_public_key_file | length > 0
+
+- name: Disable SSH password login
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-no-password.conf
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+    mode: "0644"
+  notify: Restart sshd

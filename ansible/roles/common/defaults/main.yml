@@ -1,0 +1,8 @@
+---
+timezone: UTC
+base_packages: []
+# Set per VM from terraform.tfvars `packages`.
+extra_packages: []
+# Set by Terraform; your public key, authorized for ansible_user.
+admin_public_key_file: ""
+upgrade_packages: false
